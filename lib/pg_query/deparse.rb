@@ -94,6 +94,8 @@ class PgQuery
         deparse_coalesce(node)
       when 'DELETE FROM'
         deparse_delete_from(node)
+      when 'WINDOWDEF'
+        deparse_windowdef(node)        
       when 'A_TRUNCATED'
         '...' # pg_query internal
       else
@@ -112,6 +114,7 @@ class PgQuery
     def deparse_columnref(node)
       node['fields'].map do |field|
         field.is_a?(String) ? field : deparse_item(field)
+        # field.is_a?(String) ? (field.include?(' ') ? format('"%s"', field) : field) : deparse_item(field)
       end.join('.')
     end
 
@@ -122,7 +125,11 @@ class PgQuery
     end
 
     def deparse_a_const(node)
-      node['val'].inspect.gsub('"', '\'')
+      if node['val'] == nil
+        '\'\''
+      else
+        node['val'].inspect.gsub('\'', '\'\'').gsub('"', '\'')
+      end
     end
 
     def deparse_a_star(_node)
@@ -166,12 +173,39 @@ class PgQuery
     end
 
     def deparse_funccall(node)
+      output = []
       # SUM(a, b)
       args = Array(node['args']).map { |arg| deparse_item(arg) }
       # COUNT(*)
       args << '*' if node['agg_star']
 
-      format('%s(%s)', node['funcname'].join('.'), args.join(', '))
+      output << format('%s(%s)', node['funcname'].join('.'), args.join(', '))
+
+      if node['over']
+        output << format('OVER (%s)', deparse_item(node['over']))
+      end
+
+      output.join(' ')
+    end
+
+    def deparse_windowdef(node)
+      output = []
+
+      if node['partitionClause']
+        output << 'PARTITION BY'
+        output << node['partitionClause'].map do |item|
+          deparse_item(item)
+        end.join(', ')
+      end
+
+      if node['orderClause']
+        output << 'ORDER BY'
+        output << node['orderClause'].map do |item|
+          deparse_item(item)
+        end.join(', ')
+      end      
+
+      output.join(' ')
     end
 
     def deparse_aexpr_in(node)
@@ -238,6 +272,7 @@ class PgQuery
       output = []
       output << deparse_item(node['node'])
       output << 'ASC' if node['sortby_dir'] == 1
+      output << 'DESC' if node['sortby_dir'] == 2
       output.join(' ')
     end
 
