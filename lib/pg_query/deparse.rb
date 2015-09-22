@@ -1,15 +1,20 @@
+require_relative 'deparse/interval'
+require_relative 'deparse/alter_table'
 class PgQuery
   # Reconstruct all of the parsed queries into their original form
   def deparse(tree = @parsetree)
     tree.map do |item|
-      self.class.deparse(item)
+      Deparse.from(item)
     end.join('; ')
   end
 
-  class << self
+  # rubocop:disable Metrics/ModuleLength
+  module Deparse
+    extend self
+
     # Given one element of the PgQuery#parsetree reconstruct it back into the
     # original query.
-    def deparse(item)
+    def from(item)
       deparse_item(item)
     end
 
@@ -17,87 +22,112 @@ class PgQuery
 
     def deparse_item(item, context = nil) # rubocop:disable Metrics/CyclomaticComplexity
       return if item.nil?
+      return item if item.is_a?(Fixnum)
 
       type = item.keys[0]
       node = item.values[0]
 
       case type
-      when 'RANGEVAR'
-        deparse_rangevar(node)
-      when 'AEXPR'
-        deparse_aexpr(node)
-      when 'COLUMNREF'
-        deparse_columnref(node)
-      when 'A_ARRAYEXPR'
-        deparse_a_arrayexp(node)
-      when 'A_CONST'
-        deparse_a_const(node)
-      when 'A_STAR'
-        deparse_a_star(node)
-      when 'A_INDIRECTION'
-        deparse_a_indirection(node)
-      when 'A_INDICES'
-        deparse_a_indices(node)
-      when 'ALIAS'
-        deparse_alias(node)
-      when 'PARAMREF'
-        deparse_paramref(node)
-      when 'RESTARGET'
-        deparse_restarget(node, context)
-      when 'FUNCCALL'
-        deparse_funccall(node)
-      when 'RANGEFUNCTION'
-        deparse_range_function(node)
       when 'AEXPR AND'
         deparse_aexpr_and(node)
-      when 'JOINEXPR'
-        deparse_joinexpr(node)
-      when 'SORTBY'
-        deparse_sortby(node)
-      when 'SELECT'
-        deparse_select(node)
-      when 'WITHCLAUSE'
-        deparse_with_clause(node)
-      when 'COMMONTABLEEXPR'
-        deparse_cte(node)
-      when 'INSERT INTO'
-        deparse_insert_into(node)
-      when 'UPDATE'
-        deparse_update(node)
-      when 'TYPECAST'
-        deparse_typecast(node)
-      when 'TYPENAME'
-        deparse_typename(node)
-      when 'CASE'
-        deparse_case(node)
-      when 'WHEN'
-        deparse_when(node)
-      when 'SUBLINK'
-        deparse_sublink(node)
-      when 'RANGESUBSELECT'
-        deparse_rangesubselect(node)
-      when 'ROW'
-        deparse_row(node)
+      when 'AEXPR ANY'
+        deparse_aexpr_any(node)
       when 'AEXPR IN'
         deparse_aexpr_in(node)
       when 'AEXPR NOT'
         deparse_aexpr_not(node)
+      when 'AEXPR NULLIF'
+        deparse_aexpr_nullif(node)
       when 'AEXPR OR'
         deparse_aexpr_or(node)
-      when 'AEXPR ANY'
-        deparse_aexpr_any(node)
-      when 'NULLTEST'
-        deparse_nulltest(node)
-      when 'TRANSACTION'
-        deparse_transaction(node)
-      when 'COALESCE'
-        deparse_coalesce(node)
-      when 'DELETE FROM'
-        deparse_delete_from(node)
-      when 'WINDOWDEF'
-        deparse_windowdef(node)        
+      when 'AEXPR'
+        deparse_aexpr(node, context)
+      when 'ALIAS'
+        deparse_alias(node)
+      when 'ALTER TABLE'
+        deparse_alter_table(node)
+      when 'ALTER TABLE CMD'
+        deparse_alter_table_cmd(node)
+      when 'A_ARRAYEXPR'
+        deparse_a_arrayexp(node)
+      when 'A_CONST'
+        deparse_a_const(node)
+      when 'A_INDICES'
+        deparse_a_indices(node)
+      when 'A_INDIRECTION'
+        deparse_a_indirection(node)
+      when 'A_STAR'
+        deparse_a_star(node)
       when 'A_TRUNCATED'
         '...' # pg_query internal
+      when 'CASE'
+        deparse_case(node)
+      when 'COALESCE'
+        deparse_coalesce(node)
+      when 'COLUMNDEF'
+        deparse_columndef(node)
+      when 'COLUMNREF'
+        deparse_columnref(node)
+      when 'COMMONTABLEEXPR'
+        deparse_cte(node)
+      when 'CONSTRAINT'
+        deparse_constraint(node)
+      when 'CREATEFUNCTIONSTMT'
+        deparse_create_function(node)
+      when 'CREATESTMT'
+        deparse_create_table(node)
+      when 'DEFELEM'
+        deparse_defelem(node)
+      when 'DELETE FROM'
+        deparse_delete_from(node)
+      when 'DROP'
+        deparse_drop(node)
+      when 'FUNCCALL'
+        deparse_funccall(node)
+      when 'FUNCTIONPARAMETER'
+        deparse_functionparameter(node)
+      when 'INSERT INTO'
+        deparse_insert_into(node)
+      when 'JOINEXPR'
+        deparse_joinexpr(node)
+      when 'NULLTEST'
+        deparse_nulltest(node)
+      when 'PARAMREF'
+        deparse_paramref(node)
+      when 'RANGEFUNCTION'
+        deparse_range_function(node)
+      when 'RANGESUBSELECT'
+        deparse_rangesubselect(node)
+      when 'RANGEVAR'
+        deparse_rangevar(node)
+      when 'RENAMESTMT'
+        deparse_renamestmt(node)
+      when 'RESTARGET'
+        deparse_restarget(node, context)
+      when 'ROW'
+        deparse_row(node)
+      when 'SELECT'
+        deparse_select(node)
+      when 'SORTBY'
+        deparse_sortby(node)
+      when 'SUBLINK'
+        deparse_sublink(node)
+      when 'TRANSACTION'
+        deparse_transaction(node)
+      when 'TYPECAST'
+        deparse_typecast(node)
+      when 'TYPENAME'
+        deparse_typename(node)
+      when 'UPDATE'
+        deparse_update(node)
+      when 'WHEN'
+        deparse_when(node)
+      when 'WINDOWDEF'
+        deparse_windowdef(node)
+      when 'WITHCLAUSE'
+        deparse_with_clause(node)
+      when 'VIEWSTMT'
+        deparse_viewstmt(node)
       else
         fail format("Can't deparse: %s: %s", type, node.inspect)
       end
@@ -111,10 +141,22 @@ class PgQuery
       output.join(' ')
     end
 
+    def deparse_renamestmt(node)
+      output = []
+
+      if node['renameType'] == 26 # table
+        output << 'ALTER TABLE'
+        output << deparse_item(node['relation'])
+        output << 'RENAME TO'
+        output << node['newname']
+      end
+
+      output.join(' ')
+    end
+
     def deparse_columnref(node)
       node['fields'].map do |field|
         field.is_a?(String) ? field : deparse_item(field)
-        # field.is_a?(String) ? (field.include?(' ') ? format('"%s"', field) : field) : deparse_item(field)
       end.join('.')
     end
 
@@ -125,10 +167,10 @@ class PgQuery
     end
 
     def deparse_a_const(node)
-      if node['val'] == nil
-        '\'\''
+      if node['val'].nil?
+        "''"
       else
-        node['val'].inspect.gsub('\'', '\'\'').gsub('"', '\'')
+        node['val'].inspect.gsub("'", "''").gsub('"', "'")
       end
     end
 
@@ -149,7 +191,39 @@ class PgQuery
     end
 
     def deparse_alias(node)
-      node['aliasname']
+      name = node['aliasname']
+      if node['colnames']
+        name + '(' + node['colnames'].join(', ') + ')'
+      else
+        name
+      end
+    end
+
+    def deparse_alter_table(node)
+      output = []
+      output << 'ALTER TABLE'
+
+      output << deparse_item(node['relation'])
+
+      output << node['cmds'].map do |item|
+        deparse_item(item)
+      end.join(', ')
+
+      output.join(' ')
+    end
+
+    def deparse_alter_table_cmd(node)
+      command, options = AlterTable.commands(node)
+
+      output = []
+      output << command if command
+      output << 'IF EXISTS' if node['missing_ok']
+      output << node['name']
+      output << options if options
+      output << deparse_item(node['def']) if node['def']
+      output << 'CASCADE' if node['behavior'] == 1
+
+      output.compact.join(' ')
     end
 
     def deparse_paramref(node)
@@ -174,16 +248,15 @@ class PgQuery
 
     def deparse_funccall(node)
       output = []
+
       # SUM(a, b)
       args = Array(node['args']).map { |arg| deparse_item(arg) }
       # COUNT(*)
       args << '*' if node['agg_star']
 
-      output << format('%s(%s)', node['funcname'].join('.'), args.join(', '))
-
-      if node['over']
-        output << format('OVER (%s)', deparse_item(node['over']))
-      end
+      name = (node['funcname'] - ['pg_catalog']).join('.')
+      output << format('%s(%s)', name, args.join(', '))
+      output << format('OVER (%s)', deparse_item(node['over'])) if node['over']
 
       output.join(' ')
     end
@@ -203,9 +276,13 @@ class PgQuery
         output << node['orderClause'].map do |item|
           deparse_item(item)
         end.join(', ')
-      end      
+      end
 
       output.join(' ')
+    end
+
+    def deparse_functionparameter(node)
+      deparse_item(node['argType'])
     end
 
     def deparse_aexpr_in(node)
@@ -217,6 +294,12 @@ class PgQuery
       format('NOT %s', deparse_item(node['rexpr']))
     end
 
+    def deparse_aexpr_nullif(node)
+      lexpr = deparse_item(node['lexpr'])
+      rexpr = deparse_item(node['rexpr'])
+      format('NULLIF(%s, %s)', lexpr, rexpr)
+    end
+
     def deparse_range_function(node)
       output = []
       output << 'LATERAL' if node['lateral']
@@ -225,11 +308,16 @@ class PgQuery
       output.join(' ')
     end
 
-    def deparse_aexpr(node)
+    def deparse_aexpr(node, context = false)
       output = []
-      output << deparse_item(node['lexpr'])
-      output << deparse_item(node['rexpr'])
-      output.join(' ' + node['name'][0] + ' ')
+      output << deparse_item(node['lexpr'], context || true)
+      output << deparse_item(node['rexpr'], context || true)
+      output = output.join(' ' + node['name'][0] + ' ')
+      if context
+        # This is a nested expression, add parentheses.
+        output = '(' + output + ')'
+      end
+      output
     end
 
     def deparse_aexpr_and(node)
@@ -257,6 +345,7 @@ class PgQuery
       output = []
       output << deparse_item(node['larg'])
       output << 'LEFT' if node['jointype'] == 1
+      output << 'CROSS' if node['jointype'] == 0 && node['quals'].nil?
       output << 'JOIN'
       output << deparse_item(node['rarg'])
 
@@ -285,12 +374,36 @@ class PgQuery
       output.join(' ')
     end
 
+    def deparse_viewstmt(node)
+      output = []
+      output << 'CREATE'
+      output << 'OR REPLACE' if node['replace']
+
+      persistence = relpersistence(node['view'])
+      output << persistence if persistence
+
+      output << 'VIEW'
+      output << node['view']['RANGEVAR']['relname']
+      output << format('(%s)', node['aliases'].join(', ')) if node['aliases']
+
+      output << 'AS'
+      output << deparse_item(node['query'])
+
+      case node['withCheckOption']
+      when 1
+        output << 'WITH CHECK OPTION'
+      when 2
+        output << 'WITH CASCADED CHECK OPTION'
+      end
+      output.join(' ')
+    end
+
     def deparse_cte(node)
-      output = ''
-      output += node['ctename']
-      output += format('(%s)', node['aliascolnames'].join(', ')) if node['aliascolnames']
-      output += format(' AS (%s)', deparse_item(node['ctequery']))
-      output
+      output = []
+      output << node['ctename']
+      output << format('(%s)', node['aliascolnames'].join(', ')) if node['aliascolnames']
+      output << format('AS (%s)', deparse_item(node['ctequery']))
+      output.join(' ')
     end
 
     def deparse_case(node)
@@ -301,6 +414,81 @@ class PgQuery
         output << deparse_item(node['defresult'])
       end
       output << 'END'
+      output.join(' ')
+    end
+
+    def deparse_columndef(node)
+      output = [node['colname']]
+      output << deparse_item(node['typeName'])
+      if node['raw_default']
+        output << 'USING'
+        output << deparse_item(node['raw_default'])
+      end
+      if node['constraints']
+        output += node['constraints'].map do |item|
+          deparse_item(item)
+        end
+      end
+      output.compact.join(' ')
+    end
+
+    def deparse_constraint(node)
+      output = []
+      if node['conname']
+        output << 'CONSTRAINT'
+        output << node['conname']
+      end
+      # NOT_NULL -> NOT NULL
+      output << node['contype'].gsub('_', ' ')
+
+      if node['raw_expr']
+        expression = deparse_item(node['raw_expr'])
+        # Unless it's simple, put parentheses around it
+        expression = '(' + expression + ')' if node['raw_expr'].keys == ['AEXPR']
+        output << expression
+      end
+      output << '(' + node['keys'].join(', ') + ')' if node['keys']
+      output << "USING INDEX #{node['indexname']}" if node['indexname']
+      output.join(' ')
+    end
+
+    def deparse_create_function(node)
+      output = []
+      output << 'CREATE FUNCTION'
+
+      arguments = node['parameters'].map { |item| deparse_item(item) }.join(', ')
+
+      output << node['funcname'].first + '(' + arguments + ')'
+
+      output << 'RETURNS'
+      output << deparse_item(node['returnType'])
+      output += node['options'].map { |item| deparse_item(item) }
+
+      output.join(' ')
+    end
+
+    def deparse_create_table(node)
+      output = []
+      output << 'CREATE'
+
+      persistence = relpersistence(node['relation'])
+      output << persistence if persistence
+
+      output << 'TABLE'
+
+      output << deparse_item(node['relation'])
+
+      output << '(' + node['tableElts'].map do |item|
+        deparse_item(item)
+      end.join(', ') + ')'
+
+      if node['inhRelations']
+        output << 'INHERITS'
+        output << '(' + node['inhRelations'].map do |relation|
+          deparse_item(relation)
+        end.join(', ') + ')'
+      end
+
       output.join(' ')
     end
 
@@ -323,11 +511,12 @@ class PgQuery
     end
 
     def deparse_rangesubselect(node)
-      output = '('
-      output += deparse_item(node['subquery'])
-      output += ')'
-      output += ' ' + node['alias']['ALIAS']['aliasname'] if node['alias']
-      output
+      output = '(' + deparse_item(node['subquery']) + ')'
+      if node['alias']
+        output + ' ' + deparse_item(node['alias'])
+      else
+        output
+      end
     end
 
     def deparse_row(node)
@@ -387,6 +576,16 @@ class PgQuery
         end.join(', ')
       end
 
+      if node['limitCount']
+        output << 'LIMIT'
+        output << deparse_item(node['limitCount'])
+      end
+
+      if node['limitOffset']
+        output << 'OFFSET'
+        output << deparse_item(node['limitOffset'])
+      end
+
       output.join(' ')
     end
 
@@ -439,7 +638,7 @@ class PgQuery
     end
 
     def deparse_typecast(node)
-      if deparse_item(node['typeName']) == :boolean
+      if deparse_item(node['typeName']) == 'boolean'
         deparse_item(node['arg']) == "'t'" ? 'true' : 'false'
       else
         deparse_item(node['arg']) + '::' + deparse_typename(node['typeName']['TYPENAME'])
@@ -447,11 +646,82 @@ class PgQuery
     end
 
     def deparse_typename(node)
-      if node['names'] == %w(pg_catalog bool)
-        :boolean
-      else
-        node['names'].join('.')
+      # Intervals are tricky and should be handled in a separate method because
+      # they require performing some bitmask operations.
+      return deparse_interval_type(node) if node['names'] == %w(pg_catalog interval)
+
+      output = []
+      output << 'SETOF' if node['setof']
+
+      if node['typmods']
+        arguments = node['typmods'].map do |item|
+          deparse_item(item)
+        end.join(', ')
       end
+      output << deparse_typename_cast(node['names'], arguments)
+
+      output.join(' ')
+    end
+
+    def deparse_typename_cast(names, arguments) # rubocop:disable Metrics/CyclomaticComplexity
+      catalog, type = names
+      # Just pass along any custom types.
+      # (The pg_catalog types are built-in Postgres system types and are
+      #  handled in the case statement below)
+      return names.join('.') if catalog != 'pg_catalog'
+
+      case type
+      when 'bpchar'
+        # char(2) or char(9)
+        "char(#{arguments})"
+      when 'varchar'
+        "varchar(#{arguments})"
+      when 'numeric'
+        # numeric(3, 5)
+        "numeric(#{arguments})"
+      when 'bool'
+        'boolean'
+      when 'int2'
+        'smallint'
+      when 'int4'
+        'int'
+      when 'int8'
+        'bigint'
+      when 'real', 'float4'
+        'real'
+      when 'float8'
+        'double'
+      when 'time'
+        'time'
+      when 'timetz'
+        'time with time zone'
+      when 'timestamp'
+        'timestamp'
+      when 'timestamptz'
+        'timestamp with time zone'
+      else
+        fail format("Can't deparse type: %s", type)
+      end
+    end
+
+    # Deparses interval type expressions like `interval year to month` or
+    # `interval hour to second(5)`
+    def deparse_interval_type(node)
+      type = ['interval']
+
+      if node['typmods']
+        typmods = node['typmods'].map { |typmod| deparse_item(typmod) }
+        type << Interval.from_int(typmods.first.to_i).map do |part|
+          # only the `second` type can take an argument.
+          if part == 'second' && typmods.size == 2
+            "second(#{typmods.last})"
+          else
+            part
+          end.downcase
+        end.join(' to ')
+      end
+
+      type.join(' ')
     end
 
     def deparse_nulltest(node)
@@ -476,8 +746,8 @@ class PgQuery
       output = []
       output << TRANSACTION_CMDS[node['kind']] || fail(format("Can't deparse TRANSACTION %s", node.inspect))
 
-      if node['options'] && node['options'][0]['DEFELEM']
-        output << node['options'][0]['DEFELEM']['arg']
+      if node['options']
+        output += node['options'].map { |item| deparse_item(item) }
       end
 
       output.join(' ')
@@ -485,6 +755,17 @@ class PgQuery
 
     def deparse_coalesce(node)
       format('COALESCE(%s)', node['args'].map { |a| deparse_item(a) }.join(', '))
+    end
+
+    def deparse_defelem(node)
+      case node['defname']
+      when 'as'
+        "AS $$#{node['arg'].join("\n")}$$"
+      when 'language'
+        "language #{node['arg']}"
+      else
+        node['arg']
+      end
     end
 
     def deparse_delete_from(node)
@@ -515,6 +796,29 @@ class PgQuery
       end
 
       output.join(' ')
+    end
+
+    def deparse_drop(node)
+      output = ['DROP']
+      output << 'TABLE' if node['removeType'] == 26
+      output << 'CONCURRENTLY' if node['concurrent']
+      output << 'IF EXISTS' if node['missing_ok']
+
+      output << node['objects'].join(', ')
+
+      output << 'CASCADE'  if node['behavior'] == 1
+
+      output.join(' ')
+    end
+
+    # The PG parser adds several pieces of view data onto the RANGEVAR
+    # that need to be printed before deparse_rangevar is called.
+    def relpersistence(rangevar)
+      if rangevar['RANGEVAR']['relpersistence'] == 't'
+        'TEMPORARY'
+      elsif rangevar['RANGEVAR']['relpersistence'] == 'u'
+        'UNLOGGED'
+      end
     end
   end
 end
