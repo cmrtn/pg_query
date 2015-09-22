@@ -36,6 +36,8 @@ class PgQuery
         deparse_aexpr_in(node)
       when 'AEXPR NOT'
         deparse_aexpr_not(node)
+      when 'AEXPR NULLIF'
+        deparse_aexpr_nullif(node)
       when 'AEXPR OR'
         deparse_aexpr_or(node)
       when 'AEXPR'
@@ -167,7 +169,7 @@ class PgQuery
     def deparse_a_const(node)
       if node['val'].nil?
         "''"
-      else      
+      else
         node['val'].inspect.gsub("'", "''").gsub('"', "'")
       end
     end
@@ -290,6 +292,12 @@ class PgQuery
 
     def deparse_aexpr_not(node)
       format('NOT %s', deparse_item(node['rexpr']))
+    end
+
+    def deparse_aexpr_nullif(node)
+      lexpr = deparse_item(node['lexpr'])
+      rexpr = deparse_item(node['rexpr'])
+      format('NULLIF(%s, %s)', lexpr, rexpr)
     end
 
     def deparse_range_function(node)

@@ -182,6 +182,11 @@ describe PgQuery::Deparse do
         it { is_expected.to eq query }
       end
 
+      context 'NULLIF' do
+        let(:query) { "SELECT NULLIF(a, b) FROM x" }
+        it { is_expected.to eq query }
+      end
+
       context 'COALESCE' do
         let(:query) { "SELECT * FROM x WHERE x = COALESCE(y, ?)" }
         it { is_expected.to eq query }
