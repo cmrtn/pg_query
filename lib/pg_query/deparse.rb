@@ -168,7 +168,7 @@ class PgQuery
 
     def deparse_a_const(node)
       if node['val'].nil?
-        "''"
+        "NULL"
       else
         node['val'].inspect.gsub("'", "''").gsub('"', "'")
       end
