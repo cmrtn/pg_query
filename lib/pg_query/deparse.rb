@@ -38,6 +38,8 @@ class PgQuery
           deparse_aexpr_in(node)
         when CONSTR_TYPE_FOREIGN
           deparse_aexpr_like(node)
+        when AEXPR_NULLIF
+          deparse_aexpr_nullif(node, context)
         else
           fail format("Can't deparse: %s: %s", type, node.inspect)
         end
@@ -345,6 +347,18 @@ class PgQuery
       end
       output
     end
+
+    def deparse_aexpr_nullif(node, context = false)
+      output = []
+      output << deparse_item(node['lexpr'], context || true)
+      output << deparse_item(node['rexpr'], context || true)
+      output = output.join(' , ')
+      if context
+        # This is a nested expression, add parentheses.
+        output = '(' + output + ')'
+      end
+      output
+    end    
 
     def deparse_bool_expr_and(node)
       # Only put parantheses around OR nodes that are inside this one
