@@ -152,6 +152,8 @@ class PgQuery
         end
       when INTEGER
         node['ival'].to_s
+      when NULL
+        'NULL'
       else
         fail format("Can't deparse: %s: %s", type, node.inspect)
       end
