@@ -357,7 +357,7 @@ class PgQuery
       output = output.join(' , ')
       if context
         # This is a nested expression, add parentheses.
-        output = context + '(' + output + ')'
+        output = 'NULLIF(' + output + ')'
       end
       output
     end    
