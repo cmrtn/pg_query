@@ -357,7 +357,7 @@ class PgQuery
       output = output.join(' , ')
       if context
         # This is a nested expression, add parentheses.
-        output = '(' + output + ')'
+        output = context + '(' + output + ')'
       end
       output
     end    
