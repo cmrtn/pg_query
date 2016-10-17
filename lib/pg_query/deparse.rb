@@ -42,6 +42,8 @@ class PgQuery
           deparse_aexpr_between(node)
         when AEXPR_NULLIF
           deparse_aexpr_nullif(node)
+        when AEXPR_SIMILAR
+          deparse_aexpr_similar(node)
         else
           fail format("Can't deparse: %s: %s", type, node.inspect)
         end
@@ -329,6 +331,12 @@ class PgQuery
       operator = node['name'].map { |n| deparse_item(n, :operator) } == ['~~'] ? 'LIKE' : 'NOT LIKE'
       format('%s %s %s', deparse_item(node['lexpr']), operator, value)
     end
+
+    def deparse_aexpr_similar(node)
+      value = deparse_item(node['rexpr'])
+      operator = node['name'].map { |n| deparse_item(n, :operator) } == ['~'] ? 'SIMILAR TO' : 'NOT SIMILAR TO'
+      format('%s %s %s', deparse_item(node['lexpr']), operator, value)
+    end    
 
     def deparse_bool_expr_not(node)
       format('NOT %s', deparse_item(node['args'][0]))
