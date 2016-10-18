@@ -334,7 +334,7 @@ class PgQuery
 
     def deparse_aexpr_similar(node)
       value = deparse_item(node['rexpr'])
-      operator = node['name'].map { |n| deparse_item(n, :operator) } == ['~'] ? 'SIMILAR TO' : 'NOT SIMILAR TO'
+      operator = node['name'].map { |n| deparse_item(n, :operator) } == ['~'] ? '~' : '!~'
       format('%s %s %s', deparse_item(node['lexpr']), operator, value)
     end    
 
